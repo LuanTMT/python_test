@@ -30,7 +30,7 @@ def getOneItem(id: int, session: Session = Depends(get_session)):
         print(ValueError)
 
 
-@router.post("/", tags=["user"], response_model=List[userSchemas.Item])
+@router.post("/", tags=["user"], response_model=userSchemas.Item)
 def postItem(
     item: userSchemas.Item,
     session: Session = Depends(get_session),
@@ -39,26 +39,30 @@ def postItem(
         username=item.username, hash_Pwd=item.hash_Pwd, email=item.email, role=item.role
     )
     session.add(items)
-    print("a")
     session.commit()
     session.refresh(items)
     return items
 
 
-@router.put("/{id}", tags=["user"], response_model=List[userSchemas.Item])
+@router.put("/{id}", tags=["user"])
 def updateItem(
     id: int, item: userSchemas.Item, session: Session = Depends(get_session)
 ):
-    ittem = session.query(models.Item).get(id)
-    ittem.task = item.task
-    item = models.Item(task=item.task)
+    ittem = session.query(models.Users).get(id)
+    if ittem == None:
+        return {"message": "lỗi rồi"}
+    ittem.username = item.username
+    item = models.Users(username=item.username)
     session.commit()
     return ittem
 
 
-@router.delete("/{id}", tags=["user"], response_model=List[userSchemas.Item])
+@router.delete("/{id}", tags=["user"])
 def deleteItem(id: int, session: Session = Depends(get_session)):
-    session.delete(session.query(models.Item).get(id))
+    found = session.query(models.Users).get(id)
+    if not found:
+        return "Error: k tìm thấy Users"
+    session.delete(found)
     session.commit()
     session.close()
     return "Delete item succesfully!"
