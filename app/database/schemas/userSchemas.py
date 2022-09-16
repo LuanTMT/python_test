@@ -1,3 +1,8 @@
 from pydantic import BaseModel
+
+
 class Item(BaseModel):
-    task: str
+    username: str
+    hash_Pwd: str
+    email: str
+    role: str
