@@ -26,17 +26,6 @@ class Users(Base):
     userOrder = relationship("Orders", backref="Users")
 
 
-class Member(Base):
-    __tablename__ = "member"
-    id = Column(Integer, primary_key=True)
-    username = Column(String(30))
-    email = Column(Text, nullable=False)
-    hash_Pwd = Column(String(30))
-    role = Column(String(30))
-    created_at_user = Column(DateTime, nullable=False, server_default=func.now())
-    type = Column(VARCHAR(40), nullable=False, server_default="default")
-
-
 class Products(Base):
     __tablename__ = "Products"
     id = Column(Integer, primary_key=True)
