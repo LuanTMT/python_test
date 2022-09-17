@@ -2,9 +2,10 @@ import email
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from typing import List
-from app.database.schemas import userSchemas
+from app.database.schemas import userSchemas, memberSchemas
 from ..config import get_session
 from app.database.models import models
+from fastapi import HTTPException
 
 router = APIRouter(
     prefix="/user",
@@ -50,7 +51,7 @@ def updateItem(
 ):
     ittem = session.query(models.Users).get(id)
     if ittem == None:
-        return {"message": "lỗi rồi"}
+        raise HTTPException(status_code=404, detail="not found")
     ittem.username = item.username
     item = models.Users(username=item.username)
     session.commit()
@@ -61,8 +62,22 @@ def updateItem(
 def deleteItem(id: int, session: Session = Depends(get_session)):
     found = session.query(models.Users).get(id)
     if not found:
-        return "Error: k tìm thấy Users"
+        raise HTTPException(status_code=404, detail="Not found user")
     session.delete(found)
     session.commit()
     session.close()
     return "Delete item succesfully!"
+
+
+@router.post("/member", tags=["user"], response_model=memberSchemas.Member)
+def postItem(
+    item: memberSchemas.Member,
+    session: Session = Depends(get_session),
+):
+    items = models.Member(
+        username=item.username, hash_Pwd=item.hash_Pwd, email=item.email, role=item.role
+    )
+    session.add(items)
+    session.commit()
+    session.refresh(items)
+    return items

@@ -7,6 +7,4 @@ Base.metadata.create_all(engine)
 
 app = FastAPI()
 
-# get All
-
 app.include_router(rout)
