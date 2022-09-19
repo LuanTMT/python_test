@@ -5,7 +5,6 @@ from typing import List, Literal, Optional, Union
 
 class Users(BaseModel):
     username: Union[str, None] = None
-    hash_Pwd: Union[str, None] = None
     email: Union[str, None] = None
     role: Union[str, None] = None
 
@@ -14,7 +13,7 @@ class Users(BaseModel):
 
 
 class UsersCreat(Users):
-    pass
+    password: Union[str, None] = None
 
 
 class UsersUpdate(Users):
@@ -23,11 +22,8 @@ class UsersUpdate(Users):
 
 class UsersView(Users):
     id: int
-    created_at_Users: datetime
-    email: Union[str, None]
-
-    class Config:
-        orm_mode = True
+    hash_Pwd: Optional[str]
+    created_at_Users: Union[datetime, None] = None
 
 
 class Products(BaseModel):
