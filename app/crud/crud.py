@@ -1,93 +1,85 @@
-# from typing import Union, List
-# from sqlalchemy.orm import Session
-# from app.crud.gmc_service import GmcService
-# from app.database.models import models
-# from app.database.schemas import gmc_schema, comment_schema
-# from fastapi import HTTPException
-# from sqlalchemy.orm import Query
-# from fastapi import Query as FastapiQuery
+from re import S
+from typing import Union, List
+from sqlalchemy.orm import Session
+from app.database.models import models
+from fastapi import HTTPException
+from sqlalchemy.orm import Query
+from fastapi import Query as FastapiQuery
+from app.crud.service import service
+import hashlib
+from app.database.schemas import Schemas
 
 
-# def build_gmc_query(
-#         db: Session,
-#         domain: Union[str, None] = None,
-#         status: Union[str, None] = None,
-#         merchant_id: Union[str, None] = None,
-#         email: Union[str, None] = None,
-#         site_type: Union[str, None] = None,
-#         theme: Union[str, None] = None,
-#         merchant_status: Union[List[str], None] = FastapiQuery(default=None),
-#         proxy_ip: Union[str, None] = None,
-#         server_ip: Union[str, None] = None,
-#         profile_name: Union[str, None] = None,
-#         created_by: Union[str, None] = None,
-#         ) -> Query:
-#     query = db.query(gmcs.Gmc)
-#     if domain:
-#         query = query.filter(gmcs.Gmc.domain == domain)
-#     if status:
-#         query = query.filter(gmcs.Gmc.status == status)
-#     if merchant_id:
-#         query = query.filter(gmcs.Gmc.merchant_id == merchant_id)
-#     if email:
-#         query = query.filter(gmcs.Gmc.email == email)
-#     if site_type:
-#         query = query.filter(gmcs.Gmc.site_type == site_type)
-#     if theme:
-#         query = query.filter(gmcs.Gmc.theme == theme)
+def build_user_query(
+    session: Session, username: Union[str, None], email: Union[str, None]
+) -> Query:
+    query = session.query(models.Users)
 
-#     if merchant_status:
-#         query = query.filter(gmcs.Gmc.merchant_status.in_(merchant_status))
+    if username:
+        query = query.filter(models.Users.username == username)
+    if email:
+        query = query.filter(models.Users.email == email)
+    # query = query.order_by(models.Users.id.desc())
 
-#     elif merchant_status == "any":
-#         pass
-#     if proxy_ip:
-#         query = query.filter(gmcs.Gmc.proxy_ip == proxy_ip)
-#     if server_ip:
-#         query = query.filter(gmcs.Gmc.server_ip == server_ip)
-#     if profile_name:
-#         query = query.filter(gmcs.Gmc.profile_name == profile_name)
-#     if created_by:
-#         query = query.filter(gmcs.Gmc.created_by == created_by)
-#     return query
+    return query
 
 
-# def get(
-#      db: Session,
-#         domain: Union[str, None] = None,
-#         status: Union[str, None] = None,
-#         merchant_id: Union[str, None] = None,
-#         email: Union[str, None] = None,
-#         site_type: Union[str, None] = None,
-#         theme: Union[str, None] = None,
-#         merchant_status: Union[List[str], None] = FastapiQuery(default=None),
-#         proxy_ip: Union[str, None] = None,
-#         server_ip: Union[str, None] = None,
-#         profile_name: Union[str, None] = None,
-#         created_by: Union[str, None] = None,
-#         page: int = 1,
-#         per_page: int = 20
-#         ) -> List[models.Users]:
-#     per_page = GmcService.validate_page(parameters=per_page)
-#     page = GmcService.validate_page(parameters=page, page=True)
-#     query = build_gmc_query(
-#             db=db,
-#             domain=domain,
-#             status=status,
-#             merchant_id=merchant_id,
-#             email=email,
-#             site_type=site_type,
-#             theme=theme,
-#             merchant_status=merchant_status,
-#             proxy_ip=proxy_ip,
-#             server_ip=server_ip,
-#             profile_name=profile_name,
-#             created_by=created_by
-#             )
-#     query = query.order_by(gmcs.Gmc.id.desc())
-#     query = query.offset((page - 1) * per_page).limit(per_page)
-#     gmc_query = query.all()
-#     return gmc_query
+def getUser(
+    session: Session,
+    username: Union[str, None] = None,
+    email: Union[str, None] = None,
+    page: int = 1,
+    per_page: int = 20,
+) -> List[models.Users]:
+    per_page = service.validate_page(parameters=per_page)
+    page = service.validate_page(parameters=page, page=True)
+    query = build_user_query(session=session, username=username, email=email)
+    query = query.offset((page - 1) * per_page).limit(per_page)
+    users = query.all()
+    return users
 
+def getUserbyId(session:Session, id :int):
+    return session.query(models.Users).get(id)
+
+
+def getUserbyUsername(session: Session, username: str):
+    return session.query(models.Users).filter(models.Users.username == username).first()
+
+
+def getUserbyEmail(session:Session, email: str):
+    return session.query(models.Users).filter(models.Users.email == email).first()
+
+
+def register(session: Session, user: Schemas.UsersCreat):
+    findUsername = getUserbyUsername(session, user.username)
+    findEmail = getUserbyEmail(session, user.email)
+    if findUsername:
+        raise HTTPException(
+            status_code=404, detail=f"Username: {findUsername.username} đã tồn tại "
+        )
+    if findEmail:
+        raise HTTPException(status_code=404, detail=f"Email: {findEmail.email} đã tồn tại ")
+
+    # ma hoa pwd
+    hash_object = hashlib.sha384(user.password.encode())
+    hex_dig = hash_object.hexdigest()
+    # Users = models.Users(**user.dict())
+    user = models.Users(
+        username=user.username, hash_Pwd=hex_dig, email=user.email, role=user.role
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+def updateUser(session: Session, id:int, userUpdate = Schemas.UsersUpdate ):
+    user = getUserbyId(session, id)
+    if user is not None:
+        user.username = userUpdate.username
+        Users = models.Users(username=user.username)
+        session.commit()   
+        return Users
+    else:
+        raise HTTPException(status_code=404, detail="Users Not Found")
 
 
